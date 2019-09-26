@@ -3,13 +3,21 @@
             [clojure.spec.gen.alpha :as sgen]
             [clj-http.client :as http]))
 
+(defn build-request
+  [req]
+  (merge req
+         {:headers      (merge (:headers req)
+                               {:Accept "application/vnd.github.antiope-preview+json"})
+          :as           :json
+          :content-type :json}))
+
 (defn- GET
   [url req]
-  (http/get url req))
+  (http/get url (build-request req)))
 
 (defn- PATCH
   [url req]
-  (http/patch url req))
+  (http/patch url (build-request req)))
 
 (s/fdef get-env
   :args (s/cat :name #{"GITHUB_REPOSITORY"
