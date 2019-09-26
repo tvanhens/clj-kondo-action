@@ -144,8 +144,7 @@
 
 (defn- update-run
   [run updated-run]
-  (println run updated-run)
-  (PATCH (:url run) {:form-params updated-run}))
+  (PATCH (:url run) {:form-params {:output updated-run}}))
 
 (s/def ::int?
   (s/with-gen int? #(sgen/choose 0 5)))
@@ -199,6 +198,5 @@
   [result]
   (let [run                       (current-run)
         {:keys [status] :as resp} (update-run run (format-output result))]
-    (println "RESPONSE:" resp)
     (when-not (= 200 status)
       (throw (ex-info "Failed to update check run" {:response resp})))))
