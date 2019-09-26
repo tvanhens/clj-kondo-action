@@ -58,7 +58,7 @@
 
 (defn- check-runs
   [repository sha check-name]
-  (GET (format "/repos/%s/commits/%s/check-runs"
+  (GET (format "https://api.github.com/repos/%s/commits/%s/check-runs"
                repository
                sha)
        {:query-params {:check_name check-name}}))
@@ -131,13 +131,13 @@
   [run updated-run]
   (PATCH (:url run) {:form-params updated-run}))
 
-(s/def ::pos-int?
-  (s/with-gen pos-int? #(sgen/choose 0 5)))
+(s/def ::int?
+  (s/with-gen int? #(sgen/choose 0 5)))
 
-(s/def :clj-kondo.result.summary/error ::pos-int?)
-(s/def :clj-kondo.result.summary/info ::pos-int?)
-(s/def :clj-kondo.result.summary/warning ::pos-int?)
-(s/def :clj-kondo.result.summary/duration ::pos-int?)
+(s/def :clj-kondo.result.summary/error ::int?)
+(s/def :clj-kondo.result.summary/info ::int?)
+(s/def :clj-kondo.result.summary/warning ::int?)
+(s/def :clj-kondo.result.summary/duration ::int?)
 
 (s/def :clj-kondo.result/summary
   (s/keys :req-un [:clj-kondo.result.summary/error

@@ -4,4 +4,4 @@ WORKDIR /usr/src/app
 COPY deps.edn /usr/src/app/deps.edn
 RUN clj -Sforce
 COPY . /usr/src/app
-ENTRYPOINT ["clojure", "-m", "tvanhens.clj-kondo-action.main"]
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
