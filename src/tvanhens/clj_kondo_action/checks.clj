@@ -70,7 +70,7 @@
   (GET (format "https://api.github.com/repos/%s/commits/%s/check-runs"
                repository
                sha)
-       {:query-params {:check_name check-name}}))
+       {:query-params {#_:check_name #_check-name}}))
 
 (defn- current-run
   []
