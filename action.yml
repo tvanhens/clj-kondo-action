@@ -1,0 +1,11 @@
+name: 'clj-kondo'
+describe: 'clj-kondo linter with annotations'
+inputs:
+  paths:
+    description: 'comma seperated list of paths to lint (e.g. "src,test")'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.paths }}
