@@ -74,13 +74,19 @@
 
 (defn- current-run
   []
-  (let [runs (check-runs (repository) (sha) (check-name))]
+  (let [repository (repository)
+        sha        (sha)
+        check-name (check-name)
+        runs       (check-runs repository sha check-name)]
     (if-let [run (and (= 200 (:status runs))
                       (= 1 (get-in runs [:body :total_count]))
                       (-> runs :body :check_runs first))]
       run
       (throw (ex-info "Unable to find check_run"
-                      {:check-runs runs})))))
+                      {:check-runs runs
+                       :repository repository
+                       :sha        sha
+                       :check-name check-name})))))
 
 (def ^:private finding-level->annotation-level
   {:warning "warning"
