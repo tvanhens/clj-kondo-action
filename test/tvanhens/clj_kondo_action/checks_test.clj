@@ -10,8 +10,8 @@
   (fn [f]
     (binding [s/*explain-out* expound/printer]
       (stest/instrument (stest/instrumentable-syms)
-                        {:stub `[checks/check-runs
-                                 checks/update-run
+                        {:stub `[
+                                 checks/create-run
                                  checks/get-env]})
       (f)
       (stest/unstrument))))

@@ -1,12 +1,13 @@
 (ns tvanhens.clj-kondo-action.checks
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]
+            [clojure.string :as string]
             [clj-http.client :as http]))
 
 (s/fdef get-env
   :args (s/cat :name #{"GITHUB_REPOSITORY"
-                       "GITHUB_WORKFLOW"
-                       "GITHUB_SHA"})
+                       "GITHUB_SHA"
+                       "GITHUB_WORKSPACE"})
   :ret string?)
 
 (defn- get-env
@@ -26,67 +27,17 @@
   [url req]
   (http/get url (build-request req)))
 
-(defn- PATCH
+(defn- POST
   [url req]
-  (http/patch url (build-request req)))
+  (http/post url (build-request req)))
 
 (defn- repository
   []
   (get-env "GITHUB_REPOSITORY"))
 
-(defn- check-name
-  []
-  (get-env "GITHUB_WORKFLOW"))
-
 (defn- sha
   []
   (get-env "GITHUB_SHA"))
-
-(s/def ::url
-  (s/with-gen
-    (s/and string?
-           #(.startsWith % "https://"))
-    #(sgen/fmap (fn [s] (str "https://" s)) (s/gen string?))))
-
-(s/def :github.check-runs/total_count #{1})
-(s/def :github.check-runs/check_runs
-  (s/and (s/coll-of (s/keys :req-un [::url]))
-         not-empty))
-
-(s/def :github.check-runs.resp/status #{200})
-(s/def :github.check-runs.resp/body
-  (s/keys :req-un [:github.check-runs/total_count
-                   :github.check-runs/check_runs]))
-
-(s/fdef check-runs
-  :args (s/cat :repository string?
-               :sha string?
-               :check-name string?)
-  :ret (s/keys :req-un [:github.check-runs.resp/status
-                        :github.check-runs.resp/body]))
-
-(defn- check-runs
-  [repository sha check-name]
-  (GET (format "https://api.github.com/repos/%s/commits/%s/check-runs"
-               repository
-               sha)
-       {:query-params {#_:check_name #_check-name}}))
-
-(defn- current-run
-  []
-  (let [repository (repository)
-        sha        (sha)
-        check-name (check-name)
-        runs       (check-runs repository sha check-name)]
-    (if-let [run (and (= 200 (:status runs))
-                      (= 1 (get-in runs [:body :total_count]))
-                      (-> runs :body :check_runs first))]
-      run
-      (throw (ex-info "Unable to find check_run"
-                      {:check-runs runs
-                       :repository repository
-                       :sha        sha
-                       :check-name check-name})))))
 
 (def ^:private finding-level->annotation-level
   {:warning "warning"
@@ -95,7 +46,9 @@
 
 (defn- format-annotation
   [finding]
-  {:path             (:filename finding)
+  {:path             (string/replace (:filename finding)
+                                     (str (get-env "GITHUB_WORKSPACE") "/")
+                                     "")
    :start_line       (:row finding)
    :end_line         (:row finding)
    :start_column     (:col finding)
@@ -135,16 +88,20 @@
                               :github.check-run.annotation/start_column
                               :github.check-run.annotation/end_column])))
 
-(s/fdef update-run
-  :args (s/cat :run (s/keys :req-un [::url])
-               :updated-run (s/keys :req-un [:github.check-run/title
-                                             :github.check-run/summary
-                                             :github.check-run/annotations]))
-  :ret #{{:status 200}})
+(s/fdef create-run
+  :args (s/cat :output (s/keys :req-un [:github.check-run/title
+                                        :github.check-run/summary
+                                        :github.check-run/annotations]))
+  :ret #{{:status 201}})
 
-(defn- update-run
-  [run updated-run]
-  (PATCH (:url run) {:form-params {:output updated-run}}))
+(defn- create-run
+  [output]
+  (POST (format "https://api.github.com/repos/%s/check-runs"
+                (repository))
+        {:form-params {:output     output
+                       :name       "clj-kondo"
+                       :head_sha   (sha)
+                       :conclusion "success"}}))
 
 (s/def ::int?
   (s/with-gen int? #(sgen/choose 0 5)))
@@ -196,7 +153,7 @@
 
 (defn annotate-run
   [result]
-  (let [run                       (current-run)
-        {:keys [status] :as resp} (update-run run (format-output result))]
-    (when-not (= 200 status)
-      (throw (ex-info "Failed to update check run" {:response resp})))))
+  (let [{:keys [status] :as resp} (create-run (format-output result))]
+    (when-not (= 201 status)
+      (throw (ex-info "Failed to update check run"
+                      {:response resp})))))

@@ -18,5 +18,4 @@
   (when (instrument?) (stest/instrument))
   (let [dirs   (lint-paths args)
         result (clj-kondo/run! {:lint dirs})]
-    (checks/annotate-run result)
-    (System/exit 1)))
+    (checks/annotate-run result)))
