@@ -3,11 +3,22 @@
             [clojure.spec.gen.alpha :as sgen]
             [clj-http.client :as http]))
 
+(s/fdef get-env
+  :args (s/cat :name #{"GITHUB_REPOSITORY"
+                       "GITHUB_WORKFLOW"
+                       "GITHUB_SHA"})
+  :ret string?)
+
+(defn- get-env
+  [name]
+  (System/getenv name))
+
 (defn build-request
   [req]
   (merge req
          {:headers      (merge (:headers req)
-                               {:Accept "application/vnd.github.antiope-preview+json"})
+                               {:Accept        "application/vnd.github.antiope-preview+json"
+                                :Authorization (format "token %s" (System/getenv "GITHUB_TOKEN"))})
           :as           :json
           :content-type :json}))
 
@@ -18,16 +29,6 @@
 (defn- PATCH
   [url req]
   (http/patch url (build-request req)))
-
-(s/fdef get-env
-  :args (s/cat :name #{"GITHUB_REPOSITORY"
-                       "GITHUB_WORKFLOW"
-                       "GITHUB_SHA"})
-  :ret string?)
-
-(defn- get-env
-  [name]
-  (System/getenv name))
 
 (defn- repository
   []
